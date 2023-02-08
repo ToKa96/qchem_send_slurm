@@ -307,7 +307,10 @@ class SlurmScratch:
             elif value.endswith('tb') or value.endswith('t'):
                 data = int(float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024 * 1024)
             else:
-                print(f"** Warning Unusual scratch string encountered: {value}")
+                try:
+                    data = int(value) * 1024
+                except ValueError:
+                    print(f"** Warning Unusual scratch string encountered: {value}")
         elif isinstance(value, float) or isinstance(value, int):
             data = int(value)
         else:
@@ -657,8 +660,11 @@ def write_jobscript(path, data: JobData):
     return jspath
 
 
-def send_job(path, args):
-    run(f'sbatch {path} {args}', shell=True)
+def send_job(path, args, no_send):
+    if no_send:
+        run(f'sbatch {path} {args}', shell=True)
+    else:
+        run(f"echo sbatch {path} {args}", shell=True)
 
 def cmd_args(argv):
     config = load_config()
@@ -668,7 +674,7 @@ def cmd_args(argv):
     # parser_config.add_argument('-p', '--path', help='sets the path for the config file')
     # parser_jobscript = subparser.add_parser('', help='creates the jobscript')
     parser.add_argument('INFILE', nargs='+', help='the qchem input files for which the jobscripts are to be generated.')
-    parser.add_argument('-l', action='append', help='specify resources for SLURM, will be forwarded to sbatch. use its syntax!')
+    parser.add_argument('-l', action='append', help='specify resources for SLURM, will be forwarded to sbatch. use its syntax BUT leave out "--"!')
     parser.add_argument('--no-send', action='store_false', help='flag to prevent sending the job to the cluster')
     parser.add_argument('--version', help='give name or the path to a qchem version script.')
 
@@ -679,6 +685,8 @@ def cmd_args(argv):
 def main(cmd, config):
     infiles = cmd['INFILE']
     sbatch_args = cmd['l']
+    if sbatch_args is not None:
+        sbatch_args = ' '.join(['--' + string for string in sbatch_args])
     no_send = cmd['no_send']
     version = cmd['version']
 
@@ -708,8 +716,7 @@ def main(cmd, config):
         jd.check_data()
         jspath = write_jobscript(fn, jd)
 
-        if no_send:
-            send_job(jspath, sbatch_args)
+        send_job(jspath, sbatch_args, no_send)
 
 
 if __name__ == "__main__":
