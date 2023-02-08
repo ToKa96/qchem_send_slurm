@@ -105,7 +105,7 @@ if [ -r "$SLURM_SUBMIT_DIR/{infile}.in" ]; then
 fi
 
 export QCSCRATCH="$NODE_SCRATCHDIR"
-{qchem_version_path} -slurm -nt {ncpus} "{infile}.in" "{infile}.out"
+{qchem_version_path} -nt {ncpus} "{infile}.in" "{infile}.out"
 RETURN_VALUE=$?
 
 # check if job terminated successfully
