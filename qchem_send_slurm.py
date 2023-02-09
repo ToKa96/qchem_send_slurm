@@ -179,7 +179,7 @@ stage_out
 exit $RETURN_VALUE
 '''
 
-parser_epilog ="""
+parser_epilog = """
 This script uses keywords from the QChem input file to generate the slurm jobscript.
 Two types of lines from the input file are evaluated: 
     - lines containing 'qsys' (case insensitive)
@@ -216,7 +216,11 @@ Two types of lines from the input file are evaluated:
 Unlike our cluster JUSTUS2 does not automatically assign out of ram scratch space
 thus it is advised to request it if your calculations will write significant amount 
 of output data as otherwise it will be deducted from your ram limit! 
+
+Should you encounter any issues feel free to report them to me directly or open 
+an issue at https://github.com/ToKa96/qchem_send_slurm
 """
+
 
 def _last_not_none(arg: list):
     return next((x for x in reversed(arg) if x is not None), None)
@@ -224,7 +228,10 @@ def _last_not_none(arg: list):
 
 def _timedelta_from_string(string: str):
     time = None
-    days, rest = string.split('-')
+    if "-" in string:
+        days, rest = string.split('-')
+    else:
+        rest = string
     hours, minutes, seconds = [int(x) for x in rest.split(':')]
 
     seconds += 60 * minutes
@@ -252,11 +259,14 @@ class SlurmMemory:
         if isinstance(value, str):
             value = value.lower()
             if value.endswith('m') or value.endswith('mb'):
-                data = int(''.join(c for c in value if (c.isdigit() or c == '.')))
+                data = int(
+                    ''.join(c for c in value if (c.isdigit() or c == '.')))
             elif value.endswith('gb') or value.endswith('g'):
-                data = int(float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024)
+                data = int(
+                    float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024)
             elif value.endswith('tb') or value.endswith('t'):
-                data = int(float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024 * 1024)
+                data = int(float(''.join(c for c in value if (
+                    c.isdigit() or c == '.'))) * 1024 * 1024)
             else:
                 print(f"** Warning Unusual memory string encountered: {value}")
         elif isinstance(value, float) or isinstance(value, int):
@@ -301,16 +311,20 @@ class SlurmScratch:
         if isinstance(value, str):
             value = value.lower()
             if value.endswith('m') or value.endswith('mb'):
-                data = int(''.join(c for c in value if (c.isdigit() or c == '.')))
+                data = int(
+                    ''.join(c for c in value if (c.isdigit() or c == '.')))
             elif value.endswith('gb') or value.endswith('g'):
-                data = int(float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024)
+                data = int(
+                    float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024)
             elif value.endswith('tb') or value.endswith('t'):
-                data = int(float(''.join(c for c in value if (c.isdigit() or c == '.'))) * 1024 * 1024)
+                data = int(float(''.join(c for c in value if (
+                    c.isdigit() or c == '.'))) * 1024 * 1024)
             else:
                 try:
                     data = int(value) * 1024
                 except ValueError:
-                    print(f"** Warning Unusual scratch string encountered: {value}")
+                    print(
+                        f"** Warning Unusual scratch string encountered: {value}")
         elif isinstance(value, float) or isinstance(value, int):
             data = int(value)
         else:
@@ -324,7 +338,7 @@ class SlurmScratch:
 
         if i >= 1:
             print('** Warning ** QSYS/CMD overwrites qchem variable Scratch')
-    
+
     def __get__(self, obj, type):
         ret = None
         if obj is None:
@@ -437,7 +451,8 @@ def load_config():
             write_config()
             load_config()
         else:
-            print('** Warning this script might show unexpected behaviour without such a config file!')
+            print(
+                '** Warning this script might show unexpected behaviour without such a config file!')
 
     return config
 
@@ -448,14 +463,16 @@ def write_config(path=''):
 
     """
     version_path = '/lustre/work/ws/ws1/hd_ie450-dreuw_qchem/versions/'
-    standard_path =os.path.join(os.path.expanduser('~'), '.config/qchem_send_slurm.conf') 
+    standard_path = os.path.join(os.path.expanduser(
+        '~'), '.config/qchem_send_slurm.conf')
     default_version = ''
     mail = ''
     mail_type = ['END', 'FAIL']
 
     print('creating new config file')
     if path == '':
-        inp = input(f"using standard path (heavily recommended) [y/n]? ({os.path.expanduser('~')}/.config/qchem_send_slurm.conf)\n")
+        inp = input(
+            f"using standard path (heavily recommended) [y/n]? ({os.path.expanduser('~')}/.config/qchem_send_slurm.conf)\n")
         if inp.lower().startswith('n'):
             path = input('Please enter a valid path for the config file\n')
             if not os.path.basename(path):
@@ -472,7 +489,8 @@ def write_config(path=''):
 
     config = configparser.ConfigParser()
 
-    inp = input(f'Please enter the path to your qchem version script directory for default press enter (Default: {version_path})\n')
+    inp = input(
+        f'Please enter the path to your qchem version script directory for default press enter (Default: {version_path})\n')
     if inp:
         if not os.path.exists(inp):
             print(f'** Warning ** {inp} does not exist!')
@@ -485,12 +503,13 @@ def write_config(path=''):
             print('Following version scripts found:')
             versions = []
             for f in os.listdir(version_path):
-                if os.path.isfile(f):
+                if os.path.isfile(os.path.join(version_path, f)):
                     vscript = os.path.basename(f)
                     print(vscript)
                     versions.append(vscript)
 
-            inp = input('If you wish to set one of these as default please enter its name?\n')
+            inp = input(
+                'If you wish to set one of these as default please enter its name?\n')
 
             if inp:
                 if inp in versions:
@@ -505,7 +524,8 @@ def write_config(path=''):
                 print('No default qchem version set')
 
         if os.path.isfile(version_path):
-            print(f'{version_path} is a file using it as default qchem version script')
+            print(
+                f'{version_path} is a file using it as default qchem version script')
             default_version = version_path
 
     config['PATHS'] = {'qchem_version': default_version}
@@ -513,7 +533,8 @@ def write_config(path=''):
     mail = input('Please enter mail address to use for slurm notifications?\n')
     print(f'Using {mail} as mail address for slurm')
 
-    inp = input(f'When do you wish to receive mails if you do NOT wish to receive any emails enter NONE? (Default {mail_type}, Possible Values: BEGIN, END, FAIL, INVALID_DEPEND, REQUEUE, STAGE_OUT, TIME_LIMIT, TIME_LIMIT_90, TIME_LIMIT_80 and TIME_LIMIT_50)\n')
+    inp = input(
+        f'When do you wish to receive mails if you do NOT wish to receive any emails enter NONE? (Default {mail_type}, Possible Values: BEGIN, END, FAIL, INVALID_DEPEND, REQUEUE, STAGE_OUT, TIME_LIMIT, TIME_LIMIT_90, TIME_LIMIT_80 and TIME_LIMIT_50)\n')
 
     if inp.capitalize().startswith('NO'):
         mail_type = []
@@ -618,8 +639,6 @@ def read_qin(path, data: JobData):
     read_qsys(path, data)
 
 
-
-
 def choose_version(version_path):
     versions = []
     for f in os.listdir(version_path):
@@ -628,7 +647,8 @@ def choose_version(version_path):
             print(vscript)
             versions.append(vscript)
 
-    inp = input('If you wish to set one of these as default please enter its name?\n')
+    inp = input(
+        'If you wish to set one of these as default please enter its name?\n')
     ret = version_path
     for version in versions:
         if inp in version:
@@ -645,13 +665,16 @@ def write_jobscript(path, data: JobData):
     :returns: TODO
 
     """
-    jspath = os.path.join(os.path.dirname(path), os.path.basename(path).replace('.in', '.sh'))
-    infile = os.path.join(os.path.dirname(path), os.path.basename(path).replace('.in', ''))
+    jspath = os.path.join(os.path.dirname(
+        path), os.path.basename(path).replace('.in', '.sh'))
+    infile = os.path.join(os.path.dirname(
+        path), os.path.basename(path).replace('.in', ''))
     print(infile)
     jobscript = ''
     jobscript += data.create_header()
     jobscript += jobscript_main_template
-    jobscript += jobscript_main02_template.format(infile=infile, qchem_version_path=data.qchem_version_path, ncpus=data.ncpus)
+    jobscript += jobscript_main02_template.format(
+        infile=infile, qchem_version_path=data.qchem_version_path, ncpus=data.ncpus)
     jobscript += jobscript_foot_template
 
     with open(jspath, 'w') as js:
@@ -666,21 +689,28 @@ def send_job(path, args, no_send):
     else:
         run(f"echo sbatch {path} {args}", shell=True)
 
+
 def cmd_args(argv):
     config = load_config()
     parser = argparse.ArgumentParser(description='A qchem jobscript creaion tool intended for the use on the JUSTUS2 bwhp cluster with Slurm.',
-                                    epilog=parser_epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('-c', '--config', action='store_true', help="rewrite the config file")
+                                     epilog=parser_epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-c', '--config', action='store_true',
+                        help="rewrite the config file")
     # parser_config.add_argument('-p', '--path', help='sets the path for the config file')
     # parser_jobscript = subparser.add_parser('', help='creates the jobscript')
-    parser.add_argument('INFILE', nargs='+', help='the qchem input files for which the jobscripts are to be generated.')
-    parser.add_argument('-l', action='append', help='specify resources for SLURM, will be forwarded to sbatch. use its syntax BUT leave out "--"!')
-    parser.add_argument('--no-send', action='store_false', help='flag to prevent sending the job to the cluster')
-    parser.add_argument('--version', help='give name or the path to a qchem version script.')
+    parser.add_argument(
+        'INFILE', nargs='+', help='the qchem input files for which the jobscripts are to be generated.')
+    parser.add_argument('-l', action='append',
+                        help='specify resources for SLURM, will be forwarded to sbatch. use its syntax BUT leave out "--"!')
+    parser.add_argument('--no-send', action='store_false',
+                        help='flag to prevent sending the job to the cluster')
+    parser.add_argument(
+        '--version', help='give name or the path to a qchem version script.')
 
     parser.set_defaults(func=main)
     args = parser.parse_args(argv)
     args.func(vars(args), config)
+
 
 def main(cmd, config):
     infiles = cmd['INFILE']
@@ -720,4 +750,4 @@ def main(cmd, config):
 
 
 if __name__ == "__main__":
-    cmd_args(sys.argv[1:]) 
+    cmd_args(sys.argv[1:])
