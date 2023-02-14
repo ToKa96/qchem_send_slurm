@@ -231,6 +231,7 @@ def _timedelta_from_string(string: str):
     if "-" in string:
         days, rest = string.split('-')
     else:
+        days = 0
         rest = string
     hours, minutes, seconds = [int(x) for x in rest.split(':')]
 
