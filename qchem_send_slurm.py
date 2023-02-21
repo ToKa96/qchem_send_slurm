@@ -174,7 +174,8 @@ done
 # If catch signals 2 9 15, run this function:
 trap 'handle_error' 2 9 15
 
-payload_hooks
+payload_hooks &
+wait
 stage_out
 exit $RETURN_VALUE
 '''
@@ -407,6 +408,7 @@ class JobData:
         ret = '#!/bin/bash\n'
         ret += f'#SBATCH --job-name={self.jobname}\n'
         ret += '#SBATCH --nodes=1\n'
+        ret += '#SBATCH --signal=2@120\n'
 
         if self.mem is not None:
             ret += f'#SBATCH --mem={self.mem}\n'
